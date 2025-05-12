@@ -1,0 +1,239 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Keyword Checker</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4 max-w-4xl">
+        <h1 class="text-3xl font-bold text-center mt-8 mb-8 text-gray-800">Resume Keyword Checker</h1>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Step 1: Upload Resume</h2>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer" id="drop-area">
+                <label for="file-upload" class="cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p class="mt-2 text-gray-600">Drag and drop your resume here or <span class="text-blue-600 font-medium">browse</span></p>
+                    <p class="text-xs text-gray-500 mt-1">Supported formats: PDF, DOCX, TXT, CSV, XLSX</p>
+                </label>
+                <input id="file-upload" name="file" type="file" class="hidden" accept=".pdf,.docx,.txt,.csv,.xlsx" />
+            </div>
+            <div id="file-info" class="mt-2 text-sm text-gray-600 hidden">
+                Selected file: <span id="file-name" class="font-medium"></span>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Step 2: Enter Keywords</h2>
+            <p class="text-sm text-gray-600 mb-3">Enter keywords separated by commas, spaces, or new lines</p>
+            <textarea id="keywords" class="w-full border border-gray-300 rounded-md p-3 min-h-24" 
+                placeholder="e.g., JavaScript, Python, project management, leadership, communication"></textarea>
+        </div>
+        
+        <div class="flex justify-center mb-8">
+            <button id="check-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md flex items-center" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                </svg>
+                Check Keywords
+            </button>
+        </div>
+        
+        <div id="loading" class="text-center py-10 hidden">
+            <svg class="animate-spin h-10 w-10 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-3 text-gray-600">Analyzing resume...</p>
+        </div>
+        
+        <div id="error-message" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-6 hidden">
+            <p id="error-text"></p>
+        </div>
+        
+        <div id="results" class="hidden">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-6 text-gray-700">Results</h2>
+                
+                <!-- Stats cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-gray-50 p-4 rounded-md shadow-sm">
+                        <p class="text-sm text-gray-500">Total Keywords</p>
+                        <p id="total-keywords" class="text-2xl font-bold">0</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-md shadow-sm">
+                        <p class="text-sm text-gray-500">Present</p>
+                        <p id="present-keywords" class="text-2xl font-bold text-green-600">0</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-md shadow-sm">
+                        <p class="text-sm text-gray-500">Missing</p>
+                        <p id="missing-keywords" class="text-2xl font-bold text-red-600">0</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-md shadow-sm">
+                        <p class="text-sm text-gray-500">Match Score</p>
+                        <p id="match-score" class="text-2xl font-bold text-blue-600">0%</p>
+                    </div>
+                </div>
+                
+                <!-- Results table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keyword</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Context</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table" class="bg-white divide-y divide-gray-200">
+                            <!-- Results will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        $(document).ready(function() {
+            const fileUpload = $('#file-upload');
+            const dropArea = $('#drop-area');
+            const fileName = $('#file-name');
+            const fileInfo = $('#file-info');
+            const checkBtn = $('#check-btn');
+            const keywords = $('#keywords');
+            const loading = $('#loading');
+            const results = $('#results');
+            const errorMessage = $('#error-message');
+            const errorText = $('#error-text');
+            
+            let selectedFile = null;
+            
+            // File upload via click
+            fileUpload.on('change', function(e) {
+                selectedFile = e.target.files[0];
+                if (selectedFile) {
+                    fileName.text(selectedFile.name);
+                    fileInfo.removeClass('hidden');
+                    updateSubmitButton();
+                }
+            });
+            
+            // Drag and drop functionality
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.on(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+            
+            dropArea.on('dragenter dragover', function() {
+                $(this).addClass('border-blue-500');
+            });
+            
+            dropArea.on('dragleave drop', function() {
+                $(this).removeClass('border-blue-500');
+            });
+            
+            dropArea.on('drop', function(e) {
+                selectedFile = e.originalEvent.dataTransfer.files[0];
+                if (selectedFile) {
+                    fileName.text(selectedFile.name);
+                    fileInfo.removeClass('hidden');
+                    fileUpload.prop('files', e.originalEvent.dataTransfer.files);
+                    updateSubmitButton();
+                }
+            });
+            
+            // Keywords input change
+            keywords.on('input', function() {
+                updateSubmitButton();
+            });
+            
+            function updateSubmitButton() {
+                checkBtn.prop('disabled', !selectedFile || !keywords.val().trim());
+            }
+            
+            // Check button click
+            checkBtn.on('click', function() {
+                if (!selectedFile || !keywords.val().trim()) {
+                    return;
+                }
+                
+                // Reset and show loading
+                errorMessage.addClass('hidden');
+                results.addClass('hidden');
+                loading.removeClass('hidden');
+                
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('keywords', keywords.val());
+                
+                // Submit the data
+                $.ajax({
+                    url: '/check',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(data) {
+                        loading.addClass('hidden');
+                        
+                        if (data.error) {
+                            errorText.text(data.error);
+                            errorMessage.removeClass('hidden');
+                            return;
+                        }
+                        
+                        displayResults(data);
+                    },
+                    error: function(xhr, status, error) {
+                        loading.addClass('hidden');
+                        errorText.text('An error occurred: ' + error);
+                        errorMessage.removeClass('hidden');
+                    }
+                });
+            });
+            
+            function displayResults(data) {
+                // Update stats
+                $('#total-keywords').text(data.stats.total);
+                $('#present-keywords').text(data.stats.present);
+                $('#missing-keywords').text(data.stats.missing);
+                $('#match-score').text(data.stats.score + '%');
+                
+                // Clear and populate table
+                const tableBody = $('#results-table');
+                tableBody.empty();
+                
+                data.keywords.forEach(function(result) {
+                    const row = $('<tr>').addClass(result.present ? 'bg-green-50' : 'bg-red-50');
+                    
+                    row.append(
+                        $('<td>').addClass('px-6 py-4 whitespace-nowrap text-sm font-medium').text(result.keyword),
+                        $('<td>').addClass('px-6 py-4 whitespace-nowrap text-sm').append(
+                            $('<span>').addClass(
+                                'px-2 inline-flex text-xs leading-5 font-semibold rounded-full ' + 
+                                (result.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')
+                            ).text(result.present ? 'Present' : 'Missing')
+                        ),
+                        $('<td>').addClass('px-6 py-4 text-sm text-gray-500').text(result.context || 'N/A')
+                    );
+                    
+                    tableBody.append(row);
+                });
+                
+                // Show results
+                results.removeClass('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
